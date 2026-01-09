@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dynamic Group Sortable with Add/Remove Name (Regions)</title>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
+  <style>
+    .group-list {
+      border: 1px solid #eee;
+      width: 170px;
+      min-height: 30px;
+      list-style-type: none;
+      margin: 0 10px 10px 0;
+      padding: 5px 0 0 0;
+      float: left;
+      background: #f8f8f8;
+      position: relative;
+    }
+    .group-list li {
+      margin: 0 5px 5px 5px;
+      padding: 5px 5px 5px 10px;
+      font-size: 1.1em;
+      width: 120px;
+      background: #fff;
+      border: 1px solid #ccc;
+      cursor: move;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .group-title {
+      font-weight: bold;
+      background: #eee;
+      padding: 5px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .group-edit-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #888;
+      font-size: 1.1em;
+      margin-left: 4px;
+      padding: 0 2px;
+      transition: color 0.2s;
+    }
+    .group-edit-btn:hover {
+      color: #0070d6;
+    }
+    .add-btn-wrapper {
+      text-align: center;
+      margin: 8px 0 3px 0;
+    }
+    .add-name-btn {
+      border: none;
+      background: none;
+      color: #0070d6;
+      font-size: 1.8em;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .add-name-btn:hover {
+      color: #00a300;
+    }
+    .remove-name-btn {
+      border: none;
+      background: none;
+      color: #d60000;
+      font-size: 1.2em;
+      cursor: pointer;
+      margin-left: 10px;
+      padding: 0 2px;
+      transition: color 0.2s;
+    }
+    .remove-name-btn:hover {
+      color: #900;
+    }
+    #lists-container {
+      overflow: auto;
+      margin-top: 15px;
+      min-height: 100px;
+    }
+    #error-msg {
+      color: red;
+      margin: 10px 0;
+    }
+    #lists-container:empty:before {
+      content: "Upload groups.txt to display groups.";
+      color: #888;
+      font-style: italic;
+    }
+    .region-title {
+      font-size: 1.2em;
+      color: #555;
+      margin-bottom: 8px;
+      margin-top: 20px;
+      background: #d8eaff;
+      border-left: 4px solid #0070d6;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .region-section {
+      clear: both;
+      margin-bottom: 28px;
+      padding-bottom: 5px;
+    }
+    .single-asterisk {
+      color: red !important;
+    }
+    .double-asterisk {
+      color: green !important;
+    }
+    .add-group-btn {
+      margin-left: 10px;
+      font-size: 1em;
+      color: #d60000;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: color 0.2s;
+    }
+    .add-group-btn:hover {
+      color: #900;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+  <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
+</head>
+<body>
+<input type="file" id="fileInput" accept=".txt">
+<button id="saveTxtBtn">Save as TXT</button>
+<div id="error-msg"></div>
+<div id="lists-container"></div>
+
+<script>
+// Replace Turkish characters with English equivalents
+function replaceTurkishChars(str) {
+    return str
+        .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+        .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+        .replace(/ı/g, 'i').replace(/İ/g, 'I')
+        .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+        .replace(/ş/g, 's').replace(/Ş/g, 'S')
+        .replace(/ü/g, 'u').replace(/Ü/g, 'U');
+}
+
+// Helper: Get all names (trimmed, lowercased, no leading "*", Turkish chars replaced)
+function getAllNames() {
+  const names = [];
+  $('.group-list li .name-text').each(function() {
+    let t = $(this).text().trim();
+    if (t.startsWith('**')) t = t.substring(2).trim();
+    else if (t.startsWith('*')) t = t.substring(1).trim();
+    t = replaceTurkishChars(t);
+    names.push(t.toLowerCase());
+  });
+  return names;
+}
+
+// --- Highlight names based on asterisks ---
+function createNameLi(name) {
+  let $li = $('<li class="ui-state-default"></li>');
+  let $nameSpan = $('<span class="name-text"></span>').text(name);
+
+  // Color based on asterisk prefix
+  if (name.startsWith('**')) {
+    $nameSpan.addClass('double-asterisk');
+  } else if (name.startsWith('*')) {
+    $nameSpan.addClass('single-asterisk');
+  }
+
+  let $removeBtn = $('<button class="remove-name-btn" title="Remove this name" type="button">&#128465;</button>');
+  $li.append($nameSpan).append($removeBtn);
+  return $li;
+}
+
+// --- Group Title with Edit Icon ---
+function createGroupTitleDiv(groupName) {
+  let groupClass = "";
+  if (groupName.startsWith('**')) {
+    groupClass = "double-asterisk";
+  } else if (groupName.startsWith('*')) {
+    groupClass = "single-asterisk";
+  }
+  // Use a wrapper for text and edit btn for easier access later
+  return $(
+    `<div class="group-title ${groupClass}">
+      <span class="group-title-text">${groupName}</span>
+      <button class="group-edit-btn" title="Edit group name" type="button">&#9998;</button>
+    </div>`
+  );
+}
+
+function parseGroupsTxt(text) {
+  const lines = text.split('\n');
+  const regions = {};
+  let lineHasError = false;
+
+  lines.forEach((line, idx) => {
+    if (!line.trim()) return;
+    let parts = line.split(',');
+    if (parts.length < 3) {
+      lineHasError = true;
+      return;
+    }
+    let region = parts[0].trim();
+    let group = parts[1].trim();
+    let name = parts.slice(2).join(',').trim(); // in case names have commas
+
+    if (!region || !group || !name) {
+      lineHasError = true;
+      return;
+    }
+    if (!regions[region]) regions[region] = {};
+    if (!regions[region][group]) regions[region][group] = [];
+    regions[region][group].push(name);
+  });
+
+  if (lineHasError) {
+    $("#error-msg").text("Some lines in your groups.txt file are not in the format: Region, Group, Name");
+  } else {
+    $("#error-msg").text("");
+  }
+  return regions; // { region: { group: [names] } }
+}
+
+function renderGroups(regions) {
+  $('#lists-container').empty();
+  const regionKeys = Object.keys(regions);
+
+  if (regionKeys.length === 0) {
+    $('#error-msg').text('No valid groups found in the file.');
+    return;
+  }
+
+  regionKeys.forEach(region => {
+    const $regionDiv = $('<div></div>').addClass('region-section');
+    // Add region title and +Add Group button
+    const $regionTitle = $('<div></div>').addClass('region-title group-title').text('Region: ' + region);
+    const $addGroupBtn = $('<button class="add-group-btn" type="button">+ Add Group</button>');
+    $addGroupBtn.attr('data-region', region);
+    $regionTitle.append($addGroupBtn);
+    $regionDiv.append($regionTitle);
+
+    const groups = regions[region];
+    Object.keys(groups).forEach(group => {
+      const $ul = $('<ul></ul>')
+        .attr('id', 'group-' + region.replace(/\s/g,'_') + '-' + group.replace(/\s/g,'_'))
+        .addClass('group-list connectedSortable')
+        .attr('data-region', region)
+        .attr('data-group', group);
+
+      // -- Add group title with edit icon
+      $ul.append(createGroupTitleDiv(group));
+
+      groups[group].forEach(name => {
+        $ul.append(createNameLi(name));
+      });
+
+      // Add the plus button
+      const $addBtnDiv = $('<div class="add-btn-wrapper"></div>');
+      const $addBtn = $('<button class="add-name-btn" title="Add a new name" type="button">+</button>');
+      $addBtn.attr('data-region', region).attr('data-group', group);
+      $addBtnDiv.append($addBtn);
+      $ul.append($addBtnDiv);
+
+      $regionDiv.append($ul);
+    });
+
+    $('#lists-container').append($regionDiv);
+  });
+
+  // Enable drag and drop between all lists (groups), cross-region too
+  $('.connectedSortable').sortable({
+    connectWith: '.connectedSortable',
+    items: 'li:not(.add-btn-wrapper)', // Prevent dragging the add button
+    placeholder: "ui-state-highlight"
+  }).disableSelection();
+}
+
+// Add name handler (delegated)
+$('#lists-container').on('click', '.add-name-btn', function() {
+  const region = $(this).attr('data-region');
+  const group = $(this).attr('data-group');
+  let newName = prompt('Enter a new name for Region "' + region + '", Group "' + group + '":');
+  if (newName) {
+    // Replace Turkish chars, trim leading/trailing spaces (preserve spaces in between)
+    newName = replaceTurkishChars(newName).trim();
+    if (newName.length === 0) return;
+
+    // Duplicate check (case-insensitive, ignore asterisk, Turkish chars replaced)
+    let checkName = newName;
+    if (checkName.startsWith('**')) checkName = checkName.substring(2).trim();
+    else if (checkName.startsWith('*')) checkName = checkName.substring(1).trim();
+    checkName = replaceTurkishChars(checkName).toLowerCase();
+
+    const allNames = getAllNames();
+    let displayName = '';
+    if (allNames.includes(checkName)) {
+      // Duplicate: prepend two asterisks, show green
+      displayName = '** ' + newName;
+    } else {
+      // Not duplicate: prepend one asterisk, show red
+      displayName = '* ' + newName;
+    }
+    const $ul = $('#group-' + region.replace(/\s/g,'_') + '-' + group.replace(/\s/g,'_'));
+    $ul.find('.add-btn-wrapper').before(createNameLi(displayName));
+  }
+});
+
+// Remove name handler (delegated)
+$('#lists-container').on('click', '.remove-name-btn', function() {
+  $(this).closest('li').remove();
+});
+
+// Add group handler (delegated)
+$('#lists-container').on('click', '.add-group-btn', function() {
+  const region = $(this).attr('data-region');
+  let newGroup = prompt('Enter a name for the new group in "' + region + '":');
+  if (newGroup) {
+    // Replace Turkish chars, trim leading/trailing spaces (preserve spaces in between)
+    newGroup = replaceTurkishChars(newGroup).trim();
+    if (newGroup.length === 0) return;
+
+    // Ensure group does not already exist in this region
+    let exists = false;
+    $(this).closest('.region-section').find('.group-list').each(function() {
+      if ($(this).attr('data-group') && $(this).attr('data-group').toLowerCase() === newGroup.toLowerCase()) {
+        exists = true;
+      }
+    });
+    if (exists) {
+      alert('A group with this name already exists in this region.');
+      return;
+    }
+
+    // Format: red and asterisk
+    let groupDisplay = '* ' + newGroup;
+
+    const $ul = $('<ul></ul>')
+      .attr('id', 'group-' + region.replace(/\s/g,'_') + '-' + newGroup.replace(/\s/g,'_'))
+      .addClass('group-list connectedSortable')
+      .attr('data-region', region)
+      .attr('data-group', newGroup);
+
+    $ul.append(createGroupTitleDiv(groupDisplay));
+
+    // Add the plus button for adding names
+    const $addBtnDiv = $('<div class="add-btn-wrapper"></div>');
+    const $addBtn = $('<button class="add-name-btn" title="Add a new name" type="button">+</button>');
+    $addBtn.attr('data-region', region).attr('data-group', newGroup);
+    $addBtnDiv.append($addBtn);
+    $ul.append($addBtnDiv);
+
+    $(this).closest('.region-section').append($ul);
+
+    // Enable drag and drop for the new group
+    $ul.sortable({
+      connectWith: '.connectedSortable',
+      items: 'li:not(.add-btn-wrapper)',
+      placeholder: "ui-state-highlight"
+    }).disableSelection();
+  }
+});
+
+// --- Group Edit Handler (delegated) ---
+$('#lists-container').on('click', '.group-edit-btn', function() {
+  const $groupTitleDiv = $(this).closest('.group-title');
+  const $groupTitleText = $groupTitleDiv.find('.group-title-text');
+  const oldGroupName = $groupTitleText.text();
+  let newGroupName = prompt('Edit group name:', oldGroupName);
+  if (newGroupName !== null) {
+    // Replace Turkish chars, trim leading/trailing spaces (preserve spaces in between)
+    newGroupName = replaceTurkishChars(newGroupName).trim();
+    if (newGroupName.length === 0) return;
+
+    // Update text and color class
+    $groupTitleText.text(newGroupName);
+
+    // Remove old coloring class, add new
+    $groupTitleDiv.removeClass('single-asterisk double-asterisk');
+    if (newGroupName.startsWith('**')) {
+      $groupTitleDiv.addClass('double-asterisk');
+    } else if (newGroupName.startsWith('*')) {
+      $groupTitleDiv.addClass('single-asterisk');
+    }
+
+    // Update data-group attribute for the containing <ul>
+    const $ul = $groupTitleDiv.closest('.group-list');
+    $ul.attr('data-group', newGroupName);
+
+    // Also update the id of the <ul> for drag/drop and add-name-btn
+    const region = $ul.attr('data-region');
+    const newUlId = 'group-' + region.replace(/\s/g,'_') + '-' + newGroupName.replace(/\s/g,'_');
+    $ul.attr('id', newUlId);
+
+    // Update add-name-btn's data-group attribute
+    $ul.find('.add-name-btn').attr('data-group', newGroupName);
+  }
+});
+
+$('#fileInput').on('change', function(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const regions = parseGroupsTxt(text);
+    renderGroups(regions);
+  }
+  reader.readAsText(file);
+});
+
+// Save as TXT functionality (comma-separated, no quotes)
+$('#saveTxtBtn').click(function() {
+  let txt = '';
+  $('.region-section').each(function() {
+    // Remove the add-group button from the region title before getting the text
+    const $regionTitle = $(this).find('.region-title').clone();
+    $regionTitle.find('.add-group-btn').remove();
+    const region = $regionTitle.text().replace('Region: ', '').trim();
+
+    $(this).find('.group-list').each(function() {
+      const group = $(this).find('.group-title-text').first().text().trim();
+      $(this).find('li').each(function() {
+        const name = $(this).find('.name-text').text().trim();
+        txt += region + ',' + group + ',' + name + '\n';
+      });
+    });
+  });
+  // Download as TXT
+  const blob = new Blob([txt], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'groups.txt';
+  link.click();
+});
+</script>
+</body>
+</html>
