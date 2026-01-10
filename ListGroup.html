@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Smart Group Manager</title>
+  <title>Dynamic Group Manager - Multi-Select</title>
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; margin-top: 130px; }
@@ -22,7 +22,7 @@
       font-size: 0.85em; border-bottom: 1px solid #ccc;
     }
 
-    /* SEARCH BOX WITH CLEAR ICON */
+    /* SEARCH BOX */
     #search-wrapper { position: relative; margin-left: auto; display: flex; align-items: center; }
     #search-input {
       padding: 6px 35px 6px 12px; border-radius: 20px; border: none; width: 180px;
@@ -46,13 +46,13 @@
     #drawer-content { padding: 15px; display: none; flex-direction: column; gap: 12px; clear: both; }
     #floating-controls.expanded #drawer-content { display: flex; }
 
-    /* Navigation Links */
+    /* Nav Links */
     .nav-link { text-decoration: none; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 4px; border: 1px solid #ccc; }
     .nav-e { background-color: #d8eaff; color: #004a8f; border-color: #a0c4ff; }
     .nav-k { background-color: #ffe4f0; color: #8f004a; border-color: #ffb3d9; }
     .stat-val { color: #2ecc71; margin-left: 4px; font-weight: bold; }
 
-    /* Regions & Collapsibility */
+    /* Regions */
     .region-section { clear: both; margin-bottom: 15px; scroll-margin-top: 140px; border-radius: 4px; overflow: hidden; }
     .region-title { 
       font-size: 1.1em; font-weight: bold; padding: 12px; 
@@ -74,11 +74,10 @@
     .grp-bg-e { background: #e3f2fd; color: #0d47a1; }
     .grp-bg-k { background: #fce4ec; color: #880e4f; }
 
-    /* Names & Highlight Frame */
+    /* Highlights */
     .group-list li { 
       margin: 5px; padding: 8px; font-size: 0.85em; background: #fff; 
       border: 2px solid #ddd; cursor: move; display: flex; align-items: center; border-radius: 4px;
-      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .group-list li.selected-name {
       border-color: #3498db !important;
@@ -127,7 +126,7 @@
 <div id="lists-container"></div>
 
 <script>
-/* --- UTILITIES --- */
+/* --- CORE UTILS --- */
 function cleanText(str) {
     if (!str) return "";
     let cleaned = str.replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i').replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u').trim();
@@ -151,15 +150,11 @@ function updateMetrics() {
         const regGender = kAll > eAll ? 'K' : 'E';
         
         const regName = $(this).find('.reg-name-txt').text();
-        const grpCount = $(this).find('.group-list').length;
-        const regTotalNames = $(this).find('li').length;
-        
-        $(this).find('.reg-grp-count').text(grpCount);
-        $(this).find('.reg-name-count').text(regTotalNames);
+        $(this).find('.reg-grp-count').text($(this).find('.group-list').length);
+        $(this).find('.reg-name-count').text($(this).find('li').length);
 
         $(this).find('.group-list').each(function(){
-            const liCount = $(this).find('li').length;
-            $(this).find('.grp-count-label').text('(' + liCount + ')');
+            $(this).find('.grp-count-label').text('(' + $(this).find('li').length + ')');
         });
 
         const sectionId = "region-" + index;
@@ -169,7 +164,6 @@ function updateMetrics() {
     });
 
     navItems.sort((a, b) => (a.gen !== b.gen) ? a.gen.localeCompare(b.gen) : a.name.localeCompare(b.name));
-
     const $navContainer = $('#nav-links-container').empty();
     navItems.forEach(item => {
         const genderClass = (item.gen === 'K') ? 'nav-k' : 'nav-e';
@@ -178,8 +172,7 @@ function updateMetrics() {
 }
 
 function openAndJump(id) {
-    const $sec = $('#' + id);
-    $sec.addClass('open');
+    $('#' + id).addClass('open');
     document.getElementById(id).scrollIntoView({behavior: 'smooth'});
 }
 
@@ -213,15 +206,14 @@ function createGroupHeader(groupName, gender, count = 0) {
 
 function renderGroups(regions) {
     const $container = $('#lists-container').empty();
-    
     const regionSortList = [];
     Object.keys(regions).forEach(regName => {
-        let eTotal = 0, kTotal = 0;
+        let eT = 0, kT = 0;
         Object.values(regions[regName]).forEach(grp => {
-            eTotal += grp.filter(n => n.gen === 'E').length;
-            kTotal += grp.filter(n => n.gen === 'K').length;
+            eT += grp.filter(n => n.gen === 'E').length;
+            kT += grp.filter(n => n.gen === 'K').length;
         });
-        regionSortList.push({ name: regName, gen: kTotal > eTotal ? 'K' : 'E', data: regions[regName] });
+        regionSortList.push({ name: regName, gen: kT > eT ? 'K' : 'E', data: regions[regName] });
     });
 
     regionSortList.sort((a, b) => (a.gen !== b.gen) ? a.gen.localeCompare(b.gen) : a.name.localeCompare(b.name));
@@ -260,25 +252,54 @@ function renderGroups(regions) {
         $container.append($regionDiv);
     });
     
-    $(".connectedSortable").sortable({ 
-        connectWith: ".connectedSortable", 
-        items: "li", 
-        placeholder: "ui-state-highlight", 
-        start: function(e, ui) {
-          $('.group-list li').removeClass('selected-name');
-          ui.item.addClass('selected-name');
-        },
-        stop: updateMetrics 
-    }).disableSelection();
+    initSortable();
     updateMetrics();
 }
 
-/* --- HANDLERS --- */
+/* --- MULTI-SELECT SORTABLE LOGIC --- */
+function initSortable() {
+    $(".connectedSortable").sortable({ 
+        connectWith: ".connectedSortable", 
+        items: "li", 
+        placeholder: "ui-state-highlight",
+        start: function(e, ui) {
+            // If dragging an unselected item, make it the only selected one
+            if (!ui.item.hasClass('selected-name')) {
+                $('.group-list li').removeClass('selected-name');
+                ui.item.addClass('selected-name');
+            }
+            // Temporarily hide all other selected items to mimic a bundle move
+            ui.item.siblings('.selected-name').appendTo(ui.item);
+        },
+        stop: function(e, ui) {
+            // Unpack the bundle into the new list
+            const $newParent = ui.item.parent();
+            ui.item.children('.selected-name').insertBefore(ui.item);
+            
+            // Re-sort the new list alphabetically
+            const $liElements = $newParent.children('li').get();
+            $liElements.sort(function(a, b) {
+                return cleanText($(a).find('.name-text').text()).localeCompare(cleanText($(b).find('.name-text').text()));
+            });
+            $.each($liElements, function(index, li) {
+                // Insert before the button wrapper
+                $newParent.find('.add-btn-wrapper').before(li);
+            });
 
+            updateMetrics();
+        }
+    }).disableSelection();
+}
+
+/* --- INTERACTION HANDLERS --- */
+
+// Multi-select Click Logic
 $(document).on('click', '.group-list li', function(e) {
     e.stopPropagation(); 
-    $('.group-list li').removeClass('selected-name'); 
-    $(this).addClass('selected-name'); 
+    if (!(e.ctrlKey || e.metaKey)) {
+        $('.group-list li').removeClass('selected-name');
+    }
+    $(this).toggleClass('selected-name'); 
 });
 
 $(document).on('click', function(e) {
@@ -298,26 +319,15 @@ $('#drawer-toggle').on('click', function() {
 $(document).on('click', '.add-name-btn', function(e) {
     e.preventDefault();
     const $list = $(this).closest('.group-list');
-    const existingNames = $list.find('li');
-    
+    const existing = $list.find('li');
     let gen = "";
-    if (existingNames.length > 0) {
-        const genders = existingNames.map(function() { return $(this).attr('data-gender'); }).get();
-        const allE = genders.every(g => g === 'E');
-        const allK = genders.every(g => g === 'K');
-        
-        if (allE) gen = "E";
-        else if (allK) gen = "K";
+    if (existing.length > 0) {
+        const gs = existing.map(function() { return $(this).attr('data-gender'); }).get();
+        if (gs.every(g => g === 'E')) gen = "E";
+        else if (gs.every(g => g === 'K')) gen = "K";
     }
-
-    let name = prompt("Enter Name:"); 
-    if (!name) return;
-
-    if (!gen) {
-        gen = prompt("Gender (E/K):", "E").toUpperCase();
-        if (gen !== "E" && gen !== "K") gen = "E";
-    }
-    
+    let name = prompt("Enter Name:"); if (!name) return;
+    if (!gen) { gen = prompt("Gender (E/K):", "E").toUpperCase(); if (gen !== "E" && gen !== "K") gen = "E"; }
     $(this).closest('.add-btn-wrapper').before(createNameLi(name, gen, true));
     updateMetrics();
 });
@@ -330,26 +340,18 @@ $(document).on('click', '.add-group-btn', function(e) {
     const $ul = $(`<ul class="group-list connectedSortable" data-region="${region}" data-group="${f}"></ul>`);
     $ul.append(createGroupHeader(f, 'E', 0)).append(`<div class="add-btn-wrapper"><button class="add-name-btn">+ Add Name</button></div>`);
     $(this).closest('.region-section').find('.region-content').append($ul);
-    $ul.sortable({ connectWith: ".connectedSortable", items: "li", start: function(e, ui){ $('.group-list li').removeClass('selected-name'); ui.item.addClass('selected-name'); }, stop: updateMetrics }).disableSelection();
+    initSortable();
     updateMetrics();
 });
 
 $(document).on('click', '.remove-name-btn', function(e) {
     e.stopPropagation();
-    const nameTxt = $(this).siblings('.name-text').text();
-    if (confirm(`Are you sure you want to delete "${nameTxt}"?`)) {
-        $(this).closest('li').remove();
-        updateMetrics();
-    }
+    if (confirm(`Delete name?`)) { $(this).closest('li').remove(); updateMetrics(); }
 });
 
 $(document).on('click', '.delete-group-btn', function(e) {
     e.stopPropagation();
-    const grpName = $(this).closest('.group-title').find('.group-title-text').text();
-    if (confirm(`⚠️ WARNING: This will delete group "${grpName}". Proceed?`)) {
-        $(this).closest('.group-list').remove();
-        updateMetrics();
-    }
+    if (confirm(`Delete group?`)) { $(this).closest('.group-list').remove(); updateMetrics(); }
 });
 
 $(document).on('click', '.edit-group-btn', function(e) {
@@ -416,8 +418,8 @@ function performSearch() {
             });
             gMatch ? $(this).show() : $(this).hide();
         });
-        if (rMatch) { $(this).show().addClass('open'); } 
-        else { $(this).hide().removeClass('open'); }
+        if (rMatch) $(this).show().addClass('open');
+        else $(this).hide().removeClass('open');
     });
 }
 $('#search-input').on('keyup', performSearch);
