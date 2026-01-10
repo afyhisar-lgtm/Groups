@@ -1,100 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Dynamic Group Manager - Multi-Select</title>
-  <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; margin-top: 130px; }
-    
-    /* STICKY TOP BARS */
-    #top-fixed-container {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-    #summary-bar {
-      background: #1a252f; color: white; padding: 10px 20px; 
-      display: flex; gap: 25px; align-items: center; border-bottom: 1px solid #34495e;
-    }
-    #nav-bar {
-      background: #ffffff; color: #333; padding: 10px 20px;
-      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-      font-size: 0.85em; border-bottom: 1px solid #ccc;
-    }
-
-    /* SEARCH BOX */
-    #search-wrapper { position: relative; margin-left: auto; display: flex; align-items: center; }
-    #search-input {
-      padding: 6px 35px 6px 12px; border-radius: 20px; border: none; width: 180px;
-      font-size: 0.9em; outline: none; color: #333;
-    }
-    #search-clear {
-      position: absolute; right: 10px; cursor: pointer; color: #999;
-      font-weight: bold; font-size: 18px; display: none; user-select: none;
-    }
-    #search-clear:hover { color: #e74c3c; }
-
-    /* FLOATING ACTION DRAWER */
-    #floating-controls {
-      position: fixed; bottom: 20px; right: 20px; z-index: 2000;
-      background: #ffffff; border: 1px solid #3498db; border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden;
-      transition: all 0.3s ease; width: 50px; height: 50px;
-    }
-    #floating-controls.expanded { width: 300px; height: auto; }
-    #drawer-toggle { background: #3498db; color: white; border: none; width: 50px; height: 50px; cursor: pointer; font-size: 24px; font-weight: bold; float: right; }
-    #drawer-content { padding: 15px; display: none; flex-direction: column; gap: 12px; clear: both; }
-    #floating-controls.expanded #drawer-content { display: flex; }
-
-    /* Nav Links */
-    .nav-link { text-decoration: none; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 4px; border: 1px solid #ccc; }
-    .nav-e { background-color: #d8eaff; color: #004a8f; border-color: #a0c4ff; }
-    .nav-k { background-color: #ffe4f0; color: #8f004a; border-color: #ffb3d9; }
-    .stat-val { color: #2ecc71; margin-left: 4px; font-weight: bold; }
-
-    /* Regions */
-    .region-section { clear: both; margin-bottom: 15px; scroll-margin-top: 140px; border-radius: 4px; overflow: hidden; }
-    .region-title { 
-      font-size: 1.1em; font-weight: bold; padding: 12px; 
-      display: flex; justify-content: space-between; align-items: center; 
-      cursor: pointer; user-select: none;
-    }
-    .region-blue { background: #d8eaff; border-left: 8px solid #0070d6; color: #004a8f; }
-    .region-pink { background: #ffe4f0; border-left: 8px solid #d6006e; color: #8f004a; }
-    
-    .region-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); overflow: hidden; }
-    .toggle-icon { margin-right: 10px; transition: transform 0.2s; font-size: 0.8em; display: inline-block; }
-    .region-section.open .region-content { display: block; }
-    .region-section.open .toggle-icon { transform: rotate(90deg); }
-    .reg-stats { font-weight: normal; font-size: 0.85em; opacity: 0.8; margin-left: 10px; }
-
-    /* Groups */
-    .group-list { border: 1px solid #ccc; width: 220px; min-height: 100px; list-style-type: none; margin: 0 10px 10px 0; padding: 0 0 10px 0; float: left; background: #fafafa; border-radius: 5px; }
-    .group-title { padding: 8px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; margin-bottom: 5px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
-    .grp-bg-e { background: #e3f2fd; color: #0d47a1; }
-    .grp-bg-k { background: #fce4ec; color: #880e4f; }
-
-    /* Highlights */
-    .group-list li { 
-      margin: 5px; padding: 8px; font-size: 0.85em; background: #fff; 
-      border: 2px solid #ddd; cursor: move; display: flex; align-items: center; border-radius: 4px;
-    }
-    .group-list li.selected-name {
-      border-color: #3498db !important;
-      box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
-      background-color: #ebf5fb;
-    }
-
-    .gender-badge { font-size: 0.7em; font-weight: bold; padding: 2px 5px; background: #eee; border: 1px solid #ccc; margin-right: 8px; border-radius: 3px; }
-    .single-asterisk { color: #e74c3c !important; font-weight: bold; } 
-    .double-asterisk { color: #27ae60 !important; font-weight: bold; }
-    .btn-icon { border: none; background: none; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; }
-    .btn-icon:hover { opacity: 1; }
-    .add-name-btn { width: 90%; border: 1px dashed #ccc; background: #f9f9f9; cursor: pointer; padding: 5px; font-weight: bold; color: #666; margin: 5px auto; display: block; }
-    .ui-state-highlight { height: 35px; background: #fffde7; border: 1px dashed #fbc02d; margin: 5px; }
-  </style>
-  <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
-  <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
+    <meta charset="utf-8">
+    <title>Dynamic Group Manager Pro</title>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
 </head>
 <body>
 
@@ -126,7 +38,7 @@
 <div id="lists-container"></div>
 
 <script>
-/* --- CORE UTILS --- */
+/* --- UTILITY FUNCTIONS --- */
 function cleanText(str) {
     if (!str) return "";
     let cleaned = str.replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i').replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u').trim();
@@ -176,6 +88,7 @@ function openAndJump(id) {
     document.getElementById(id).scrollIntoView({behavior: 'smooth'});
 }
 
+/* --- DOM ELEMENT CREATION --- */
 function createNameLi(name, gender, isManual = false) {
     let raw = cleanText(name), final = raw, aClass = "";
     if (isManual) {
@@ -204,6 +117,7 @@ function createGroupHeader(groupName, gender, count = 0) {
     </div>`);
 }
 
+/* --- RENDER & SORTABLE --- */
 function renderGroups(regions) {
     const $container = $('#lists-container').empty();
     const regionSortList = [];
@@ -256,53 +170,41 @@ function renderGroups(regions) {
     updateMetrics();
 }
 
-/* --- MULTI-SELECT SORTABLE LOGIC --- */
 function initSortable() {
     $(".connectedSortable").sortable({ 
         connectWith: ".connectedSortable", 
         items: "li", 
         placeholder: "ui-state-highlight",
         start: function(e, ui) {
-            // If dragging an unselected item, make it the only selected one
             if (!ui.item.hasClass('selected-name')) {
                 $('.group-list li').removeClass('selected-name');
                 ui.item.addClass('selected-name');
             }
-            // Temporarily hide all other selected items to mimic a bundle move
             ui.item.siblings('.selected-name').appendTo(ui.item);
         },
         stop: function(e, ui) {
-            // Unpack the bundle into the new list
             const $newParent = ui.item.parent();
             ui.item.children('.selected-name').insertBefore(ui.item);
             
-            // Re-sort the new list alphabetically
             const $liElements = $newParent.children('li').get();
-            $liElements.sort(function(a, b) {
-                return cleanText($(a).find('.name-text').text()).localeCompare(cleanText($(b).find('.name-text').text()));
-            });
-            $.each($liElements, function(index, li) {
-                // Insert before the button wrapper
-                $newParent.find('.add-btn-wrapper').before(li);
-            });
+            $liElements.sort((a, b) => cleanText($(a).find('.name-text').text()).localeCompare(cleanText($(b).find('.name-text').text())));
+            $.each($liElements, (index, li) => $newParent.find('.add-btn-wrapper').before(li));
 
             updateMetrics();
         }
     }).disableSelection();
 }
 
-/* --- INTERACTION HANDLERS --- */
+/* --- EVENT HANDLERS --- */
 
 // Multi-select Click Logic
 $(document).on('click', '.group-list li', function(e) {
     e.stopPropagation(); 
-    if (!(e.ctrlKey || e.metaKey)) {
-        $('.group-list li').removeClass('selected-name');
-    }
+    if (!(e.ctrlKey || e.metaKey)) $('.group-list li').removeClass('selected-name');
     $(this).toggleClass('selected-name'); 
 });
 
-$(document).on('click', function(e) {
+$(document).on('click', (e) => {
     if (!$(e.target).closest('.group-list li').length) $('.group-list li').removeClass('selected-name');
 });
 
@@ -423,7 +325,7 @@ function performSearch() {
     });
 }
 $('#search-input').on('keyup', performSearch);
-$('#search-clear').on('click', function() { $('#search-input').val(''); performSearch(); });
+$('#search-clear').on('click', () => { $('#search-input').val(''); performSearch(); });
 </script>
 </body>
 </html>
