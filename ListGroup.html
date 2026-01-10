@@ -2,448 +2,327 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Dynamic Group Sortable with Add/Remove Name (Regions)</title>
+  <title>Dynamic Group Manager - Color-Coded Nav</title>
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
   <style>
-    .group-list {
-      border: 1px solid #eee;
-      width: 170px;
-      min-height: 30px;
-      list-style-type: none;
-      margin: 0 10px 10px 0;
-      padding: 5px 0 0 0;
-      float: left;
-      background: #f8f8f8;
-      position: relative;
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; margin-top: 115px; }
+    
+    /* Sticky Bars */
+    #top-fixed-container {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
-    .group-list li {
-      margin: 0 5px 5px 5px;
-      padding: 5px 5px 5px 10px;
-      font-size: 1.1em;
-      width: 120px;
-      background: #fff;
-      border: 1px solid #ccc;
-      cursor: move;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    #summary-bar {
+      background: #1a252f; color: white; padding: 10px 20px; 
+      display: flex; gap: 25px; align-items: center; border-bottom: 1px solid #34495e;
+    }
+    #nav-bar {
+      background: #ffffff; color: #333; padding: 10px 20px;
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      font-size: 0.85em; border-bottom: 1px solid #ccc;
+    }
+
+    /* Color Coded Nav Links */
+    .nav-link { 
+      text-decoration: none; font-weight: bold; cursor: pointer;
+      padding: 4px 10px; border-radius: 4px; border: 1px solid #ccc;
+      transition: transform 0.1s;
+    }
+    .nav-link:active { transform: scale(0.95); }
+    .nav-e { background-color: #d8eaff; color: #004a8f; border-color: #a0c4ff; }
+    .nav-k { background-color: #ffe4f0; color: #8f004a; border-color: #ffb3d9; }
+    .nav-link:hover { filter: brightness(90%); }
+
+    .stat-val { color: #2ecc71; margin-left: 4px; font-weight: bold; }
+
+    #search-input {
+      padding: 6px 12px; border-radius: 20px; border: none; width: 200px;
+      font-size: 0.9em; outline: none; margin-left: auto; color: #333;
+    }
+
+    #controls { 
+      background: white; padding: 15px; border-radius: 8px; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; 
+      display: flex; gap: 15px; align-items: center;
+    }
+
+    .region-section { clear: both; margin-bottom: 30px; scroll-margin-top: 130px; }
+    .region-title {
+      font-size: 1.1em; font-weight: bold; padding: 10px; margin: 20px 0 10px 0;
+      display: flex; justify-content: space-between; align-items: center; border-radius: 4px;
+    }
+    .region-blue { background: #d8eaff; border-left: 8px solid #0070d6; color: #004a8f; }
+    .region-pink { background: #ffe4f0; border-left: 8px solid #d6006e; color: #8f004a; }
+
+    .group-list {
+      border: 1px solid #ccc; width: 220px; min-height: 80px; list-style-type: none;
+      margin: 0 10px 10px 0; padding: 0; float: left; background: #fafafa; border-radius: 5px;
+      padding-bottom: 10px;
     }
     .group-title {
-      font-weight: bold;
-      background: #eee;
-      padding: 5px;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
+      background: #ededed; padding: 8px; border-bottom: 1px solid #ddd;
+      display: flex; justify-content: space-between; align-items: center; font-size: 0.9em;
+      margin-bottom: 5px;
     }
-    .group-edit-btn {
-      border: none;
-      background: none;
-      cursor: pointer;
-      color: #888;
-      font-size: 1.1em;
-      margin-left: 4px;
-      padding: 0 2px;
-      transition: color 0.2s;
+
+    .group-list li {
+      margin: 5px; padding: 8px; font-size: 0.85em; background: #fff;
+      border: 1px solid #ddd; cursor: move; display: flex; align-items: center;
     }
-    .group-edit-btn:hover {
-      color: #0070d6;
-    }
-    .add-btn-wrapper {
-      text-align: center;
-      margin: 8px 0 3px 0;
-    }
-    .add-name-btn {
-      border: none;
-      background: none;
-      color: #0070d6;
-      font-size: 1.8em;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-      transition: color 0.2s;
-    }
-    .add-name-btn:hover {
-      color: #00a300;
-    }
-    .remove-name-btn {
-      border: none;
-      background: none;
-      color: #d60000;
-      font-size: 1.2em;
-      cursor: pointer;
-      margin-left: 10px;
-      padding: 0 2px;
-      transition: color 0.2s;
-    }
-    .remove-name-btn:hover {
-      color: #900;
-    }
-    #lists-container {
-      overflow: auto;
-      margin-top: 15px;
-      min-height: 100px;
-    }
-    #error-msg {
-      color: red;
-      margin: 10px 0;
-    }
-    #lists-container:empty:before {
-      content: "Upload groups.txt to display groups.";
-      color: #888;
-      font-style: italic;
-    }
-    .region-title {
-      font-size: 1.2em;
-      color: #555;
-      margin-bottom: 8px;
-      margin-top: 20px;
-      background: #d8eaff;
-      border-left: 4px solid #0070d6;
-      padding: 5px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .region-section {
-      clear: both;
-      margin-bottom: 28px;
-      padding-bottom: 5px;
-    }
-    .single-asterisk {
-      color: red !important;
-    }
-    .double-asterisk {
-      color: green !important;
-    }
-    .add-group-btn {
-      margin-left: 10px;
-      font-size: 1em;
-      color: #d60000;
-      border: none;
-      background: none;
-      cursor: pointer;
-      font-weight: bold;
-      transition: color 0.2s;
-    }
-    .add-group-btn:hover {
-      color: #900;
-    }
+    
+    .gender-badge { font-size: 0.7em; font-weight: bold; padding: 2px 5px; background: #eee; border: 1px solid #ccc; margin-right: 8px; border-radius: 3px; }
+    .single-asterisk { color: #e74c3c !important; font-weight: bold; } 
+    .double-asterisk { color: #27ae60 !important; font-weight: bold; }
+    
+    .btn-icon { border: none; background: none; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 0 2px; }
+    .btn-icon:hover { opacity: 1; }
+    .add-name-btn { width: 90%; border: 1px dashed #ccc; background: #f9f9f9; cursor: pointer; padding: 5px; font-weight: bold; color: #666; margin: 5px auto; display: block; }
+    .ui-state-highlight { height: 35px; background: #fffde7; border: 1px dashed #fbc02d; margin: 5px; }
   </style>
   <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
   <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.js"></script>
 </head>
 <body>
-<input type="file" id="fileInput" accept=".txt">
-<button id="saveTxtBtn">Save as TXT</button>
-<div id="error-msg"></div>
+
+<div id="top-fixed-container">
+    <div id="summary-bar">
+        <div>Regions:<span id="total-regions" class="stat-val">0</span></div>
+        <div>Names:<span id="total-names" class="stat-val">0</span></div>
+        <input type="text" id="search-input" placeholder="Search names...">
+    </div>
+    <div id="nav-bar">
+        <span style="font-weight: bold; color: #666; margin-right: 5px;">Jump to Region:</span>
+        <div id="nav-links-container" style="display:flex; gap:8px; flex-wrap: wrap;"></div>
+    </div>
+</div>
+
+<div id="controls">
+  <input type="file" id="fileInput" accept=".txt">
+  <button id="saveTxtBtn" style="cursor:pointer; padding: 8px 25px; background: #3498db; color: white; border: none; border-radius: 4px; font-weight:bold;">Save as TXT</button>
+</div>
+
 <div id="lists-container"></div>
 
 <script>
-// Replace Turkish characters with English equivalents
-function replaceTurkishChars(str) {
-    return str
-        .replace(/ç/g, 'c').replace(/Ç/g, 'C')
-        .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
-        .replace(/ı/g, 'i').replace(/İ/g, 'I')
-        .replace(/ö/g, 'o').replace(/Ö/g, 'O')
-        .replace(/ş/g, 's').replace(/Ş/g, 'S')
-        .replace(/ü/g, 'u').replace(/Ü/g, 'U');
-}
-
-// Helper: Get all names (trimmed, lowercased, no leading "*", Turkish chars replaced)
-function getAllNames() {
-  const names = [];
-  $('.group-list li .name-text').each(function() {
-    let t = $(this).text().trim();
-    if (t.startsWith('**')) t = t.substring(2).trim();
-    else if (t.startsWith('*')) t = t.substring(1).trim();
-    t = replaceTurkishChars(t);
-    names.push(t.toLowerCase());
-  });
-  return names;
-}
-
-// --- Highlight names based on asterisks ---
-function createNameLi(name) {
-  let $li = $('<li class="ui-state-default"></li>');
-  let $nameSpan = $('<span class="name-text"></span>').text(name);
-
-  // Color based on asterisk prefix
-  if (name.startsWith('**')) {
-    $nameSpan.addClass('double-asterisk');
-  } else if (name.startsWith('*')) {
-    $nameSpan.addClass('single-asterisk');
-  }
-
-  let $removeBtn = $('<button class="remove-name-btn" title="Remove this name" type="button">&#128465;</button>');
-  $li.append($nameSpan).append($removeBtn);
-  return $li;
-}
-
-// --- Group Title with Edit Icon ---
-function createGroupTitleDiv(groupName) {
-  let groupClass = "";
-  if (groupName.startsWith('**')) {
-    groupClass = "double-asterisk";
-  } else if (groupName.startsWith('*')) {
-    groupClass = "single-asterisk";
-  }
-  // Use a wrapper for text and edit btn for easier access later
-  return $(
-    `<div class="group-title ${groupClass}">
-      <span class="group-title-text">${groupName}</span>
-      <button class="group-edit-btn" title="Edit group name" type="button">&#9998;</button>
-    </div>`
-  );
-}
-
-function parseGroupsTxt(text) {
-  const lines = text.split('\n');
-  const regions = {};
-  let lineHasError = false;
-
-  lines.forEach((line, idx) => {
-    if (!line.trim()) return;
-    let parts = line.split(',');
-    if (parts.length < 3) {
-      lineHasError = true;
-      return;
+// --- UTILITIES ---
+function cleanText(str) {
+    if (!str) return "";
+    let cleaned = str.replace(/ç/g, 'c').replace(/Ç/g, 'C').replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+                     .replace(/ı/g, 'i').replace(/İ/g, 'I').replace(/ö/g, 'o').replace(/Ö/g, 'O')
+                     .replace(/ş/g, 's').replace(/Ş/g, 'S').replace(/ü/g, 'u').replace(/Ü/g, 'U').trim();
+    let prefix = "";
+    if (cleaned.startsWith('**')) { prefix = "** "; cleaned = cleaned.substring(2).trim(); }
+    else if (cleaned.startsWith('*')) { prefix = "* "; cleaned = cleaned.substring(1).trim(); }
+    if (cleaned.length > 0) {
+        cleaned = cleaned.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
     }
-    let region = parts[0].trim();
-    let group = parts[1].trim();
-    let name = parts.slice(2).join(',').trim(); // in case names have commas
+    return prefix + cleaned;
+}
 
-    if (!region || !group || !name) {
-      lineHasError = true;
-      return;
+function updateMetrics() {
+    $('#total-regions').text($('.region-section').length);
+    $('#total-names').text($('.group-list li').length);
+
+    const $navContainer = $('#nav-links-container').empty();
+
+    $('.region-section').each(function(index) {
+        const firstLi = $(this).find('li').first();
+        const gender = firstLi.length ? firstLi.attr('data-gender') : 'E';
+        
+        $(this).find('.region-title').removeClass('region-blue region-pink').addClass(gender === 'K' ? 'region-pink' : 'region-blue');
+        
+        const regName = $(this).find('.reg-name-txt').text();
+        const count = $(this).find('.group-list').length;
+        $(this).find('.reg-grp-count').text("(" + count + ")");
+
+        const sectionId = "region-" + index;
+        $(this).attr('id', sectionId);
+
+        const genderClass = (gender === 'K') ? 'nav-k' : 'nav-e';
+        $navContainer.append(`<a class="nav-link ${genderClass}" onclick="document.getElementById('${sectionId}').scrollIntoView({behavior: 'smooth'})">${regName}</a>`);
+    });
+
+    $('.group-list').each(function() {
+        $(this).find('.grp-name-count').text("(" + $(this).find('li').length + ")");
+    });
+}
+
+function createNameLi(name, gender, isAddingManual = false) {
+    let rawName = cleanText(name); 
+    let finalName = rawName;
+    let asteriskClass = "";
+    if (isAddingManual) {
+        let stripped = rawName.replace(/^\*+/, "").trim().toLowerCase();
+        let exists = false;
+        $('.name-text').each(function(){
+            if($(this).text().replace(/^\*+/, "").trim().toLowerCase() === stripped) exists = true;
+        });
+        if (exists) {
+            finalName = "** " + rawName.replace(/^\*+/, "").trim(); asteriskClass = "double-asterisk";
+        } else {
+            finalName = "* " + rawName.replace(/^\*+/, "").trim(); asteriskClass = "single-asterisk";
+        }
+    } else {
+        if (name.startsWith('**')) asteriskClass = "double-asterisk";
+        else if (name.startsWith('*')) asteriskClass = "single-asterisk";
+        finalName = name; 
     }
-    if (!regions[region]) regions[region] = {};
-    if (!regions[region][group]) regions[region][group] = [];
-    regions[region][group].push(name);
-  });
+    return $(`<li class="ui-state-default" data-gender="${gender}">
+      <span class="gender-badge">${gender}</span>
+      <span class="name-text ${asteriskClass}">${finalName}</span>
+      <button class="btn-icon remove-name-btn">×</button>
+  </li>`);
+}
 
-  if (lineHasError) {
-    $("#error-msg").text("Some lines in your groups.txt file are not in the format: Region, Group, Name");
-  } else {
-    $("#error-msg").text("");
-  }
-  return regions; // { region: { group: [names] } }
+function createGroupHeader(groupName) {
+    const formatted = cleanText(groupName);
+    let asteriskClass = "";
+    if (formatted.startsWith('**')) asteriskClass = "double-asterisk";
+    else if (formatted.startsWith('*')) asteriskClass = "single-asterisk";
+    return $(`
+    <div class="group-title">
+        <span class="group-title-text ${asteriskClass}">${formatted}</span>
+        <span class="grp-name-count" style="font-size:0.8em; color:#7f8c8d;">(0)</span>
+        <div class="group-controls">
+            <button class="btn-icon edit-group-btn">✎</button>
+            <button class="btn-icon delete-group-btn">🗑</button>
+        </div>
+    </div>
+  `);
 }
 
 function renderGroups(regions) {
-  $('#lists-container').empty();
-  const regionKeys = Object.keys(regions);
-
-  if (regionKeys.length === 0) {
-    $('#error-msg').text('No valid groups found in the file.');
-    return;
-  }
-
-  regionKeys.forEach(region => {
-    const $regionDiv = $('<div></div>').addClass('region-section');
-    // Add region title and +Add Group button
-    const $regionTitle = $('<div></div>').addClass('region-title group-title').text('Region: ' + region);
-    const $addGroupBtn = $('<button class="add-group-btn" type="button">+ Add Group</button>');
-    $addGroupBtn.attr('data-region', region);
-    $regionTitle.append($addGroupBtn);
-    $regionDiv.append($regionTitle);
-
-    const groups = regions[region];
-    Object.keys(groups).forEach(group => {
-      const $ul = $('<ul></ul>')
-        .attr('id', 'group-' + region.replace(/\s/g,'_') + '-' + group.replace(/\s/g,'_'))
-        .addClass('group-list connectedSortable')
-        .attr('data-region', region)
-        .attr('data-group', group);
-
-      // -- Add group title with edit icon
-      $ul.append(createGroupTitleDiv(group));
-
-      groups[group].forEach(name => {
-        $ul.append(createNameLi(name));
-      });
-
-      // Add the plus button
-      const $addBtnDiv = $('<div class="add-btn-wrapper"></div>');
-      const $addBtn = $('<button class="add-name-btn" title="Add a new name" type="button">+</button>');
-      $addBtn.attr('data-region', region).attr('data-group', group);
-      $addBtnDiv.append($addBtn);
-      $ul.append($addBtnDiv);
-
-      $regionDiv.append($ul);
+    const $container = $('#lists-container').empty();
+    const sortedRegionKeys = Object.keys(regions).sort((a, b) => {
+        const genA = regions[a][Object.keys(regions[a])[0]][0]?.gen || 'E';
+        const genB = regions[b][Object.keys(regions[b])[0]][0]?.gen || 'E';
+        return genA.localeCompare(genB);
     });
 
-    $('#lists-container').append($regionDiv);
-  });
+    sortedRegionKeys.forEach(region => {
+        const $regionDiv = $(`<div class="region-section"></div>`);
+        $regionDiv.append(`
+            <div class="region-title">
+                <div class="reg-title-content">Region: <span class="reg-name-txt">${cleanText(region)}</span> <span class="reg-grp-count"></span></div>
+                <button class="add-group-btn" data-region="${region}" style="cursor:pointer; padding: 4px 10px; border-radius:3px; border:1px solid rgba(0,0,0,0.1); background:white;">+ Add Group</button>
+            </div>`);
 
-  // Enable drag and drop between all lists (groups), cross-region too
-  $('.connectedSortable').sortable({
-    connectWith: '.connectedSortable',
-    items: 'li:not(.add-btn-wrapper)', // Prevent dragging the add button
-    placeholder: "ui-state-highlight"
-  }).disableSelection();
+        Object.keys(regions[region]).sort().forEach(group => {
+            const $ul = $(`<ul class="group-list connectedSortable" data-region="${region}" data-group="${group}"></ul>`);
+            $ul.append(createGroupHeader(group));
+            regions[region][group].sort((a, b) => cleanText(a.name).localeCompare(cleanText(b.name)))
+                  .forEach(item => $ul.append(createNameLi(item.name, item.gen)));
+            $ul.append(`<div class="add-btn-wrapper"><button class="add-name-btn">+ Add Name</button></div>`);
+            $regionDiv.append($ul);
+        });
+        $container.append($regionDiv);
+    });
+    $(".connectedSortable").sortable({ connectWith: ".connectedSortable", items: "li", placeholder: "ui-state-highlight", stop: updateMetrics }).disableSelection();
+    updateMetrics();
 }
 
-// Add name handler (delegated)
-$('#lists-container').on('click', '.add-name-btn', function() {
-  const region = $(this).attr('data-region');
-  const group = $(this).attr('data-group');
-  let newName = prompt('Enter a new name for Region "' + region + '", Group "' + group + '":');
-  if (newName) {
-    // Replace Turkish chars, trim leading/trailing spaces (preserve spaces in between)
-    newName = replaceTurkishChars(newName).trim();
-    if (newName.length === 0) return;
-
-    // Duplicate check (case-insensitive, ignore asterisk, Turkish chars replaced)
-    let checkName = newName;
-    if (checkName.startsWith('**')) checkName = checkName.substring(2).trim();
-    else if (checkName.startsWith('*')) checkName = checkName.substring(1).trim();
-    checkName = replaceTurkishChars(checkName).toLowerCase();
-
-    const allNames = getAllNames();
-    let displayName = '';
-    if (allNames.includes(checkName)) {
-      // Duplicate: prepend two asterisks, show green
-      displayName = '** ' + newName;
-    } else {
-      // Not duplicate: prepend one asterisk, show red
-      displayName = '* ' + newName;
-    }
-    const $ul = $('#group-' + region.replace(/\s/g,'_') + '-' + group.replace(/\s/g,'_'));
-    $ul.find('.add-btn-wrapper').before(createNameLi(displayName));
-  }
-});
-
-// Remove name handler (delegated)
-$('#lists-container').on('click', '.remove-name-btn', function() {
-  $(this).closest('li').remove();
-});
-
-// Add group handler (delegated)
-$('#lists-container').on('click', '.add-group-btn', function() {
-  const region = $(this).attr('data-region');
-  let newGroup = prompt('Enter a name for the new group in "' + region + '":');
-  if (newGroup) {
-    // Replace Turkish chars, trim leading/trailing spaces (preserve spaces in between)
-    newGroup = replaceTurkishChars(newGroup).trim();
-    if (newGroup.length === 0) return;
-
-    // Ensure group does not already exist in this region
-    let exists = false;
-    $(this).closest('.region-section').find('.group-list').each(function() {
-      if ($(this).attr('data-group') && $(this).attr('data-group').toLowerCase() === newGroup.toLowerCase()) {
-        exists = true;
-      }
+// --- SEARCH ---
+$('#search-input').on('keyup', function() {
+    const val = $(this).val().toLowerCase();
+    if (val === "") { $('.group-list li, .group-list, .region-section').show(); return; }
+    $('.region-section').each(function() {
+        let regionMatch = false;
+        $(this).find('.group-list').each(function() {
+            let groupMatch = false;
+            $(this).find('li').each(function() {
+                if ($(this).find('.name-text').text().toLowerCase().includes(val)) {
+                    $(this).show(); groupMatch = true; regionMatch = true;
+                } else { $(this).hide(); }
+            });
+            groupMatch ? $(this).show() : $(this).hide();
+        });
+        regionMatch ? $(this).show() : $(this).hide();
     });
-    if (exists) {
-      alert('A group with this name already exists in this region.');
-      return;
+});
+
+// --- GLOBAL EVENT DELEGATION (Fix for Google Sites) ---
+
+$(document).on('click', '.edit-group-btn', function() {
+    const $titleSpan = $(this).closest('.group-title').find('.group-title-text');
+    let newName = prompt("Edit Group Name:", $titleSpan.text());
+    if (newName && newName.trim() !== "") {
+        const f = cleanText(newName);
+        $titleSpan.text(f).removeClass('single-asterisk double-asterisk');
+        if (f.startsWith('**')) $titleSpan.addClass('double-asterisk');
+        else if (f.startsWith('*')) $titleSpan.addClass('single-asterisk');
+        $(this).closest('.group-list').attr('data-group', f);
+        updateMetrics();
     }
+});
 
-    // Format: red and asterisk
-    let groupDisplay = '* ' + newGroup;
+$(document).on('click', '.add-name-btn', function(e) {
+    e.preventDefault();
+    let name = prompt("Enter Name:"); if (!name) return;
+    let gen = prompt("Gender (E/K):", "E").toUpperCase();
+    $(this).closest('.add-btn-wrapper').before(createNameLi(name, gen, true));
+    updateMetrics();
+});
 
-    const $ul = $('<ul></ul>')
-      .attr('id', 'group-' + region.replace(/\s/g,'_') + '-' + newGroup.replace(/\s/g,'_'))
-      .addClass('group-list connectedSortable')
-      .attr('data-region', region)
-      .attr('data-group', newGroup);
-
-    $ul.append(createGroupTitleDiv(groupDisplay));
-
-    // Add the plus button for adding names
-    const $addBtnDiv = $('<div class="add-btn-wrapper"></div>');
-    const $addBtn = $('<button class="add-name-btn" title="Add a new name" type="button">+</button>');
-    $addBtn.attr('data-region', region).attr('data-group', newGroup);
-    $addBtnDiv.append($addBtn);
-    $ul.append($addBtnDiv);
-
+$(document).on('click', '.add-group-btn', function(e) {
+    e.preventDefault();
+    let g = prompt("Group Name:"); if (!g) return;
+    let name = g.trim().startsWith('*') ? g.trim() : "* " + g.trim();
+    const region = $(this).data('region'), f = cleanText(name);
+    
+    const $ul = $(`<ul class="group-list connectedSortable" data-region="${region}" data-group="${f}"></ul>`);
+    $ul.append(createGroupHeader(f)).append(`<div class="add-btn-wrapper"><button class="add-name-btn">+ Add Name</button></div>`);
+    
     $(this).closest('.region-section').append($ul);
-
-    // Enable drag and drop for the new group
-    $ul.sortable({
-      connectWith: '.connectedSortable',
-      items: 'li:not(.add-btn-wrapper)',
-      placeholder: "ui-state-highlight"
+    
+    // Initialize sortable for the new list
+    $ul.sortable({ 
+        connectWith: ".connectedSortable", 
+        items: "li", 
+        placeholder: "ui-state-highlight",
+        stop: updateMetrics 
     }).disableSelection();
-  }
+    
+    updateMetrics();
 });
 
-// --- Group Edit Handler (delegated) ---
-$('#lists-container').on('click', '.group-edit-btn', function() {
-  const $groupTitleDiv = $(this).closest('.group-title');
-  const $groupTitleText = $groupTitleDiv.find('.group-title-text');
-  const oldGroupName = $groupTitleText.text();
-  let newGroupName = prompt('Edit group name:', oldGroupName);
-  if (newGroupName !== null) {
-    // Replace Turkish chars, trim leading/trailing spaces (preserve spaces in between)
-    newGroupName = replaceTurkishChars(newGroupName).trim();
-    if (newGroupName.length === 0) return;
+$(document).on('click', '.delete-group-btn', function() { if(confirm("Delete Group?")) { $(this).closest('.group-list').remove(); updateMetrics(); } });
+$(document).on('click', '.remove-name-btn', function() { $(this).closest('li').remove(); updateMetrics(); });
 
-    // Update text and color class
-    $groupTitleText.text(newGroupName);
-
-    // Remove old coloring class, add new
-    $groupTitleDiv.removeClass('single-asterisk double-asterisk');
-    if (newGroupName.startsWith('**')) {
-      $groupTitleDiv.addClass('double-asterisk');
-    } else if (newGroupName.startsWith('*')) {
-      $groupTitleDiv.addClass('single-asterisk');
-    }
-
-    // Update data-group attribute for the containing <ul>
-    const $ul = $groupTitleDiv.closest('.group-list');
-    $ul.attr('data-group', newGroupName);
-
-    // Also update the id of the <ul> for drag/drop and add-name-btn
-    const region = $ul.attr('data-region');
-    const newUlId = 'group-' + region.replace(/\s/g,'_') + '-' + newGroupName.replace(/\s/g,'_');
-    $ul.attr('id', newUlId);
-
-    // Update add-name-btn's data-group attribute
-    $ul.find('.add-name-btn').attr('data-group', newGroupName);
-  }
+$('#fileInput').on('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        const regions = {};
+        evt.target.result.split('\n').forEach(line => {
+            if (!line.trim()) return;
+            const p = line.split(',').map(item => item.trim());
+            if (p.length < 3) return;
+            if (!regions[p[0]]) regions[p[0]] = {};
+            if (!regions[p[0]][p[1]]) regions[p[0]][p[1]] = [];
+            regions[p[0]][p[1]].push({ name: p[2], gen: p[3]?.toUpperCase() || 'E' });
+        });
+        renderGroups(regions);
+    };
+    reader.readAsText(file);
 });
 
-$('#fileInput').on('change', function(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text = e.target.result;
-    const regions = parseGroupsTxt(text);
-    renderGroups(regions);
-  }
-  reader.readAsText(file);
-});
-
-// Save as TXT functionality (comma-separated, no quotes)
 $('#saveTxtBtn').click(function() {
-  let txt = '';
-  $('.region-section').each(function() {
-    // Remove the add-group button from the region title before getting the text
-    const $regionTitle = $(this).find('.region-title').clone();
-    $regionTitle.find('.add-group-btn').remove();
-    const region = $regionTitle.text().replace('Region: ', '').trim();
-
-    $(this).find('.group-list').each(function() {
-      const group = $(this).find('.group-title-text').first().text().trim();
-      $(this).find('li').each(function() {
-        const name = $(this).find('.name-text').text().trim();
-        txt += region + ',' + group + ',' + name + '\n';
-      });
+    let txt = '';
+    $('.region-section').each(function() {
+        const reg = $(this).find('.reg-name-txt').text().trim();
+        $(this).find('.group-list').each(function() {
+            const grp = $(this).find('.group-title-text').text().trim();
+            $(this).find('li').each(function() {
+                txt += `${reg},${grp},${$(this).find('.name-text').text()},${$(this).attr('data-gender')}\n`;
+            });
+        });
     });
-  });
-  // Download as TXT
-  const blob = new Blob([txt], { type: 'text/plain' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'groups.txt';
-  link.click();
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'data_export.txt';
+    link.click();
 });
 </script>
 </body>
