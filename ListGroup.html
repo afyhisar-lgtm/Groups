@@ -92,14 +92,20 @@ function openAndJump(id) {
 function createNameLi(name, gender, isManual = false) {
     let raw = cleanText(name), final = raw, aClass = "";
     if (isManual) {
-        let stripped = raw.replace(/^\*+/, "").trim().toLowerCase();
+        let l = raw.replace(/^\*+/, "").trim().toLowerCase().split(" ");
+        let stripped = "";
+        for (let w of l) {
+            if (w != "") {
+                stripped += w + ' ';
+            }
+        }
+        stripped = stripped.trim();
         let exists = false;
         $('.name-text').each(function(){ if($(this).text().replace(/^\*+/, "").trim().toLowerCase() === stripped) exists = true; });
-        let l = raw.replace(/^\*+/, "").trim().split(" ");
         let cleaned = "";
         for (let w of l) {
             if (w != "") {
-                cleaned += w + ' ';
+                cleaned += w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() + " ";
             }
         }
         cleaned = cleaned.trim();
@@ -337,4 +343,3 @@ $('#search-clear').on('click', () => { $('#search-input').val(''); performSearch
 </script>
 </body>
 </html>
-
