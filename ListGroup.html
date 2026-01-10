@@ -95,7 +95,15 @@ function createNameLi(name, gender, isManual = false) {
         let stripped = raw.replace(/^\*+/, "").trim().toLowerCase();
         let exists = false;
         $('.name-text').each(function(){ if($(this).text().replace(/^\*+/, "").trim().toLowerCase() === stripped) exists = true; });
-        final = (exists ? "** " : "* ") + raw.replace(/^\*+/, "").trim();
+        let l = raw.replace(/^\*+/, "").trim().split(" ");
+        let cleaned = "";
+        for (let w of l) {
+            if (w != "") {
+                cleaned += w + ' ';
+            }
+        }
+        cleaned = cleaned.trim();
+        final = (exists ? "** " : "* ") + cleaned;
         aClass = exists ? "double-asterisk" : "single-asterisk";
     } else {
         if (name.startsWith('**')) aClass = "double-asterisk";
@@ -329,3 +337,4 @@ $('#search-clear').on('click', () => { $('#search-input').val(''); performSearch
 </script>
 </body>
 </html>
+
